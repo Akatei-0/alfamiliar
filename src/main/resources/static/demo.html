@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Альфамильяр — Помощник по кредитам для малого бизнеса</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        alfa: {
+                            red: '#EF3124',
+                            hover: '#D82317',
+                            dark: '#1F2022',
+                            light: '#F3F4F6',
+                            card: '#FFFFFF',
+                            border: '#E5E7EB'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+        
+        .chat-bubble-assistant { animation: fadeIn 0.3s ease-in-out; }
+        .chat-bubble-user { animation: fadeInRight 0.25s ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .string { color: #10B981; }
+        .number { color: #F59E0B; }
+        .boolean { color: #6366F1; }
+        .null { color: #EF4444; }
+        .key { color: #3B82F6; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-alfa-dark antialiased h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Header Navigation -->
+    <header class="bg-alfa-dark text-white px-6 py-3.5 flex items-center justify-between shadow-md border-b border-gray-800 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-alfa-red text-white w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xl shadow-md">A</div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                    Альфамильяр <span class="bg-alfa-red text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full text-white">Alfa Assist</span>
+                </h1>
+                <p class="text-xs text-gray-400">Помощник по подбору финансирования бизнеса</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4 text-sm">
+            <div class="flex items-center bg-gray-800 p-1 rounded-xl border border-gray-700">
+                <button id="modeSimulatedBtn" onclick="setMode('simulated')" class="px-3 py-1 rounded-lg text-xs font-medium transition-all bg-alfa-red text-white shadow">
+                    <i class="fa-solid fa-robot mr-1.5"></i>Симуляция
+                </button>
+                <button id="modeRealBtn" onclick="setMode('real')" class="px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-server mr-1.5"></i>FastAPI (Localhost)
+                </button>
+            </div>
+
+            <button onclick="restartChat()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white px-3 py-1.5 rounded-xl border border-gray-700 text-xs font-medium flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-rotate-right"></i> Сброс
+            </button>
+
+            <button onclick="toggleInspector()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white p-1.5 rounded-xl border border-gray-700 text-xs transition" title="Инспектор API">
+                <i class="fa-solid fa-code text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+        <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
+            <div class="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between text-xs text-gray-500 shadow-sm z-10">
+                <div class="flex items-center space-x-2">
+                    <span class="font-medium text-gray-700">Текущий шаг:</span>
+                    <span id="currentStepBadge" class="bg-red-50 text-alfa-red font-semibold px-2.5 py-0.5 rounded-md border border-red-100">start</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-1.5">
+                        <span id="statusIndicator" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span id="statusText" class="text-gray-600 font-medium">Готов к работе</span>
+                    </span>
+                    <span class="text-gray-300">|</span>
+                    <span id="endpointLabel" class="text-gray-400 font-mono text-[11px]">Встроенный движок</span>
+                </div>
+            </div>
+
+            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"></div>
+
+            <div id="typingIndicator" class="hidden px-6 py-2 bg-transparent flex items-center gap-2 text-xs text-gray-400">
+                <div class="flex space-x-1">
+                    <div class="w-2 h-2 bg-alfa-red rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-2 h-2 bg-alfa-red rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                    <div class="w-2 h-2 bg-alfa-red rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                </div>
+                <span>Альфамильяр формирует ответ...</span>
+            </div>
+        </main>
+
+        <aside id="inspectorPanel" class="w-96 bg-gray-900 border-l border-gray-800 flex flex-col text-gray-300 transition-all duration-300 z-20">
+            <div class="p-3.5 border-b border-gray-800 flex items-center justify-between bg-gray-950">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-terminal text-alfa-red text-sm"></i>
+                    <h2 class="font-bold text-xs uppercase tracking-wider text-gray-200">API Inspector (JSON)</h2>
+                </div>
+                <span class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-mono">POST /api/chat</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-xs leading-relaxed">
+                <div>
+                    <div class="flex items-center justify-between text-gray-400 mb-1.5">
+                        <span class="font-semibold text-[11px] text-blue-400 uppercase tracking-wide">REQUEST BODY</span>
+                        <span id="requestTime" class="text-[10px] text-gray-500">0 ms</span>
+                    </div>
+                    <pre id="jsonRequest" class="bg-gray-950 p-3 rounded-lg border border-gray-800 overflow-x-auto text-gray-300 whitespace-pre-wrap">{ /* Ожидание запроса... */ }</pre>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between text-gray-400 mb-1.5">
+                        <span class="font-semibold text-[11px] text-green-400 uppercase tracking-wide">RESPONSE DATA</span>
+                        <span id="responseStatus" class="text-[10px] text-green-500 font-bold">200 OK</span>
+                    </div>
+                    <pre id="jsonResponse" class="bg-gray-950 p-3 rounded-lg border border-gray-800 overflow-x-auto text-gray-300 whitespace-pre-wrap">{ /* Ожидание ответа... */ }</pre>
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-gray-800 bg-gray-950 text-[11px] text-gray-500 flex justify-between items-center">
+                <span>FastAPI Schema v2.0</span>
+                <span class="text-alfa-red">Alfa Business AI</span>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        let apiMode = 'simulated';
+        let currentStep = 'start';
+        let contextData = {};
+        const REAL_API_URL = 'http://localhost:8080/api/chat';
+
+        window.addEventListener('DOMContentLoaded', () => { restartChat(); });
+
+        function setMode(mode) {
+            apiMode = mode;
+            const simBtn = document.getElementById('modeSimulatedBtn');
+            const realBtn = document.getElementById('modeRealBtn');
+            const label = document.getElementById('endpointLabel');
+
+            if (mode === 'simulated') {
+                simBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium transition-all bg-alfa-red text-white shadow';
+                realBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all';
+                label.innerText = 'Встроенный движок';
+            } else {
+                realBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium transition-all bg-alfa-red text-white shadow';
+                simBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all';
+                label.innerText = 'http://localhost:8080';
+            }
+        }
+
+        function toggleInspector() {
+            document.getElementById('inspectorPanel').classList.toggle('hidden');
+        }
+
+        function restartChat() {
+            currentStep = 'start';
+            contextData = {};
+            document.getElementById('chatContainer').innerHTML = '';
+            document.getElementById('currentStepBadge').innerText = 'start';
+            
+            appendAssistantMessage({
+                message: "Привет! Я Альфамильяр — твой помощник от Альфа-Банка. Помогу подобрать идеальное финансирование для твоего дела за 2 минуты без лишней бюрократии. Подскажи, у тебя уже зарегистрирован бизнес?",
+                next_step: "start",
+                options: ["Да, зарегистрирован", "Нет, только планирую"]
+            });
+            updateInspector({}, {});
+        }
+
+        async function sendChoice(choiceText) {
+            appendUserMessage(choiceText);
+            disablePreviousOptions();
+
+            const payload = {
+                step: currentStep,
+                choice: choiceText,
+                business_registered: contextData.business_registered || null,
+                entity_type: contextData.entity_type || null,
+                goal: contextData.goal || null,
+                credit_history: contextData.credit_history || null
+            };
+
+            if (currentStep === 'start') contextData.business_registered = choiceText;
+            else if (currentStep === 'branch_yes_entity') contextData.entity_type = choiceText;
+            else if (currentStep === 'select_goal') contextData.goal = choiceText;
+            else if (currentStep === 'select_credit_history') contextData.credit_history = choiceText;
+
+            document.getElementById('typingIndicator').classList.remove('hidden');
+            const startTime = performance.now();
+            let responseData;
+
+            try {
+                if (apiMode === 'simulated') {
+                    await new Promise(r => setTimeout(r, 600));
+                    responseData = simulateBackendResponse(payload);
+                } else {
+                    const res = await fetch(REAL_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    responseData = await res.json();
+                }
+
+                const endTime = performance.now();
+                const latency = Math.round(endTime - startTime);
+
+                currentStep = responseData.next_step;
+                document.getElementById('currentStepBadge').innerText = currentStep;
+                updateInspector(payload, responseData, latency);
+                appendAssistantMessage(responseData);
+
+            } catch (err) {
+                console.error(err);
+                appendAssistantMessage({
+                    message: `⚠️ **Ошибка подключения к API FastAPI:** ${err.message}. Убедитесь, что сервер запущен на localhost:8080 или переключитесь на «Симуляцию».`,
+                    next_step: currentStep,
+                    options: ["Попробовать снова"]
+                });
+            } finally {
+                document.getElementById('typingIndicator').classList.add('hidden');
+                scrollToBottom();
+            }
+        }
+
+        function appendUserMessage(text) {
+            const container = document.getElementById('chatContainer');
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex justify-end chat-bubble-user";
+            wrapper.innerHTML = `<div class="bg-alfa-red text-white max-w-lg rounded-2xl rounded-tr-none px-4 py-3 shadow-sm"><p class="text-sm font-medium">${escapeHtml(text)}</p></div>`;
+            container.appendChild(wrapper);
+            scrollToBottom();
+        }
+
+        function appendAssistantMessage(data) {
+            const container = document.getElementById('chatContainer');
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex gap-3 max-w-3xl chat-bubble-assistant";
+
+            let innerHTML = `
+                <div class="w-9 h-9 rounded-xl bg-alfa-dark text-white flex items-center justify-center font-bold text-sm shrink-0 shadow">ФМ</div>
+                <div class="flex-1 space-y-3">
+                    <div class="bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-tl-none p-4 shadow-sm space-y-3">
+                        <div class="text-sm leading-relaxed whitespace-pre-line">${formatMarkdown(data.message)}</div>`;
+
+            if (data.table_data) innerHTML += renderTable(data.table_data);
+            if (data.documents_required && data.documents_required.length > 0) innerHTML += renderDocList(data.documents_required);
+            if (data.link) {
+                innerHTML += `<div class="pt-1"><a href="${data.link}" target="_blank" class="inline-flex items-center gap-2 bg-red-50 text-alfa-red hover:bg-alfa-red hover:text-white px-4 py-2 rounded-xl border border-red-200 text-xs font-semibold transition"><i class="fa-solid fa-external-link text-[11px]"></i>Перейти к оформлению на сайте</a></div>`;
+            }
+
+            innerHTML += `</div>`;
+
+            if (data.options && data.options.length > 0) {
+                innerHTML += `<div class="options-container flex flex-wrap gap-2 pt-1">`;
+                data.options.forEach(opt => {
+                    innerHTML += `<button onclick="sendChoice('${escapeHtml(opt)}')" class="action-btn bg-white hover:bg-alfa-red hover:text-white text-gray-800 border border-gray-300 hover:border-alfa-red text-xs font-medium py-2 px-3.5 rounded-xl shadow-sm transition-all active:scale-95 text-left">${escapeHtml(opt)}</button>`;
+                });
+                innerHTML += `</div>`;
+            }
+
+            innerHTML += `</div>`;
+            wrapper.innerHTML = innerHTML;
+            container.appendChild(wrapper);
+            scrollToBottom();
+        }
+
+        function renderTable(table) {
+            let html = `<div class="overflow-x-auto border border-gray-200 rounded-xl my-2"><table class="w-full text-xs text-left"><thead class="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200"><tr>`;
+            table.headers.forEach(h => { html += `<th class="p-2.5 border-r border-gray-200 last:border-0">${escapeHtml(h)}</th>`; });
+            html += `</tr></thead><tbody class="divide-y divide-gray-200">`;
+            table.rows.forEach(row => {
+                html += `<tr>`;
+                row.forEach((cell, idx) => {
+                    const isHeaderCell = idx === 0 ? 'font-semibold text-gray-900 bg-gray-50/50' : 'text-gray-600';
+                    html += `<td class="p-2.5 ${isHeaderCell} border-r border-gray-200 last:border-0">${escapeHtml(cell)}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function renderDocList(docs) {
+            let html = `<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-2"><div class="font-semibold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-folder-open text-alfa-red"></i> Необходимый пакет документов:</div><ul class="space-y-1.5">`;
+            docs.forEach(doc => {
+                html += `<li class="flex items-start gap-2 text-slate-700"><i class="fa-regular fa-square-check text-green-600 mt-0.5"></i><span>${escapeHtml(doc)}</span></li>`;
+            });
+            html += `</ul></div>`;
+            return html;
+        }
+
+        function disablePreviousOptions() {
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed', 'hover:bg-white', 'hover:text-gray-800', 'hover:border-gray-300');
+                btn.classList.remove('active:scale-95');
+            });
+        }
+
+        function updateInspector(req, res, latency = 0) {
+            document.getElementById('jsonRequest').innerHTML = syntaxHighlight(JSON.stringify(req, null, 2));
+            document.getElementById('jsonResponse').innerHTML = syntaxHighlight(JSON.stringify(res, null, 2));
+            document.getElementById('requestTime').innerText = `${latency} ms`;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
+        }
+
+        function formatMarkdown(text) {
+            if (!text) return '';
+            return escapeHtml(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+        }
+
+        function syntaxHighlight(json) {
+            if (!json) return '';
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-A0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    cls = /:$/.test(match) ? 'key' : 'string';
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        // Автономный симулятор (дублирует логику бэкэнда для демо-режима)
+        function simulateBackendResponse(data) {
+            const { step, choice } = data;
+            if (step === 'start') {
+                if (choice === "Да, зарегистрирован") {
+                    return { message: "Отлично! Какая у тебя форма деятельности?", next_step: "branch_yes_entity", options: ["Самозанятый", "Индивидуальный предприниматель (ИП)", "Общество с ограниченной ответственностью (ООО)"] };
+                } else {
+                    return { message: "О, это самый крутой и волнительный этап! Запуск своего дела — мощный шаг. Чтобы банк мог выдать деньги, дело нужно официально оформить. Скажи, ты уже думал, что выбрать: ИП или ООО?", next_step: "branch_no_registration", options: ["Что лучше: ИП или ООО?", "Я уже знаю, хочу ИП", "Я уже знаю, хочу ООО"] };
+                }
+            }
+            if (step === 'branch_no_registration') {
+                if (choice === "Что лучше: ИП или ООО?") {
+                    return { message: "Сравнение форм ведения бизнеса:", next_step: "branch_no_registration_choice", options: ["Выбираю ИП", "Выбираю ООО"], table_data: { headers: ["Критерий", "ИП", "ООО"], rows: [["Для кого?", "Идеально для старта в одиночку.", "Для бизнеса с партнерами."], ["Главный плюс", "Свобода в деньгах после налогов.", "Безопасность (уставный капитал)."], ["Главный минус", "Ответственность личным имуществом.", "Сложный вывод дивидендов."]] } };
+                } else if (choice.includes("ИП")) {
+                    return { message: "Отличный выбор! Перейдите по ссылке для бесплатной регистрации ИП онлайн:", next_step: "collect_docs_startup", options: ["Документы подготовлены, переходим к заявке"], link: "https://alfabank.ru/sme/registration/ip/" };
+                } else {
+                    return { message: "Надежный формат! Перейдите по ссылке для бесплатной регистрации ООО:", next_step: "collect_docs_startup", options: ["Документы подготовлены, переходим к заявке"], link: "https://alfabank.ru/sme/registration/ooo/" };
+                }
+            }
+            if (step === 'branch_no_registration_choice') {
+                return { message: "Замечательно! Перейдите по ссылке для регистрации:", next_step: "collect_docs_startup", options: ["Документы подготовлены, переходим к заявке"], link: choice.includes("ИП") ? "https://alfabank.ru/sme/registration/ip/" : "https://alfabank.ru/sme/registration/ooo/" };
+            }
+            if (step === 'collect_docs_startup') {
+                return { message: "Перед отправкой заявки давайте проверим пакет документов:", next_step: "primary_scoring", options: ["Продолжить и пройти скоринг"], documents_required: ["Паспорт, ИНН, СНИЛС", "Выписка из ЕГРИП/ЕГРЮЛ", "Бизнес-план с финмоделью", "Смета расходов"] };
+            }
+            if (step === 'branch_yes_entity') {
+                const options = choice === "Самозанятый" ? ["Закупка материалов / реклама", "Личные цели (техника, авто)"] : ["Кассовый разрыв (зарплаты, налоги)", "Масштабирование (товар, оборудование)"];
+                return { message: "Для чего именно сейчас необходимы деньги?", next_step: "select_goal", options: options };
+            }
+            if (step === 'select_goal') {
+                return { message: "Сталкивались ли вы с трудностями при оформлении кредитов за последние 2 года?", next_step: "primary_scoring", options: ["Да, были отказы", "Одобряли без проблем", "Нет опыта, кредиты не брали"] };
+            }
+            if (step === 'primary_scoring') {
+                return { message: "♥️ **Первичная проверка и скоринг**\nБанк проводит автоматизированную проверку кредитной истории компании и руководителей.", next_step: "collect_documents", options: ["Прикрепить документы (Действующий бизнес)", "Прикрепить документы (Стартап)"] };
+            }
+            if (step === 'collect_documents') {
+                const isExisting = choice.includes("Действующий");
+                return { message: isExisting ? "♥️ **Список документов для действующего бизнеса:**" : "♥️ **Список документов для стартапа:**", next_step: "wait_decision", options: ["Отправить документы на рассмотрение"], documents_required: isExisting ? ["Учредительные документы", "Финансовая отчётность", "Выписки по счетам"] : ["Паспорт и ИНН учредителя", "Бизнес-план", "Смета расходов"] };
+            }
+            if (step === 'wait_decision') {
+                return { message: "Мы рассматриваем вашу заявку, как только будут результаты, сразу напишу вам )", next_step: "bank_decision_simulation", options: ["Получить решение банка"] };
+            }
+            if (step === 'bank_decision_simulation') {
+                return { message: "♥️ На основе собранной информации банк принял решение:\n\n🎯 **Одобрение с индивидуальными условиями.** Выберите ставку:", next_step: "completed", options: ["🟢 Вариант 1: Сниженная ставка", "🟡 Вариант 2: Базовая ставка", "⚪ Вариант 3: Чистый процент"] };
+            }
+            return { message: "🎉 Заявка успешно принята! Менеджер свяжется с вами в течение 15 минут.", next_step: "completed", options: [], link: "https://alfabank.ru/sme/" };
+        }
+    </script>
+</body>
+</html>

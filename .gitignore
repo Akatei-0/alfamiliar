@@ -1,0 +1,17 @@
+# Maven / Gradle build outputs
+target/
+build/
+.gradle/
+out/
+
+# IDE files
+.idea/
+*.iml
+.settings/
+.project/
+.classpath/
+
+# Compiled class files
+*.class
+alfamiliar-docker.tar
+alfamiliar-docker.tar

@@ -1,0 +1,7 @@
+target/
+.gradle/
+build/
+.git/
+.gitignore
+*.iml
+.mvn/
